@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webserver</title>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&callback=initMap" async defer></script>
+    <style>
+        body {
+            min-width: 310px;
+            max-width: 800px;
+            height: 400px;
+            margin: auto;
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #292929;
+            color: #ffffff;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .container {
+            margin-bottom: 20px;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .weather-icon {
+            display: block;
+            margin: 0 auto;
+            width: 50px;
+            height: 50px;
+        }
+
+        .weather-info {
+            text-align: center;
+        }
+
+        .location-time {
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .weather-status {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>ESP Weather Station</h2>
+    <div class="container">
+        <div class="location" id="location">Loading...</div>
+        <div class="timeline" id="timeline">Loading...</div>
+        <img id="weather-icon" class="weather-icon" src="" alt="Weather Icon">
+        <div class="weather-info">
+            <p id="temperature">Nhiệt độ: </p>
+            <p id="humidity">Độ ẩm: </p>
+            <p id="pressure">Áp suất: </p>
+            <p id="lux">Ánh sáng: </p>
+            <p id="gas">Nồng độ khí gas: </p>
+            <p id="weather-status">Trạng thái thời tiết: </p> 
+    </div>
+    <div id="chart-temperature" class="container"></div>
+    <div id="chart-humidity" class="container"></div>
+    <div id="chart-pressure" class="container"></div>
+    <div id="chart-lux" class="container"></div>
+    <div id="chart-gas" class="container"></div>
+ 
+    <script>
+        //get temperature from sensor
+        setInterval(function () {
+            var xhttpT = new XMLHttpRequest();
+            xhttpT.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("temperature").innerText = "Nhiệt độ: " + this.responseText + "°C";
+                }
+            };
+            xhttpT.open("GET", "/temperature", true);
+            xhttpT.send();
+        }, 3000);
+        //get pressure from sensor
+        setInterval(function () {
+            var xhttpP = new XMLHttpRequest();
+            xhttpP.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("pressure").innerText = "Áp suất: " + this.responseText + "hPa";
+                }
+            };
+            xhttpP.open("GET", "/pressure", true);
+            xhttpP.send();
+        }, 3000);
+        //get lux from sensor
+        setInterval(function () {
+            var xhttpL = new XMLHttpRequest();
+            xhttpL.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("lux").innerText = "Ánh sáng: " + this.responseText + "lx";
+                }
+            };
+            xhttpL.open("GET", "/lux", true);
+            xhttpL.send();
+        }, 3000);
+        //get gas from sensor
+        setInterval(function () {
+            var xhttpG = new XMLHttpRequest();
+            xhttpG.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("gas").innerText = "Nồng độ khí gas: " + this.responseText + "ppm";
+                }
+            };
+            xhttpG.open("GET", "/gas", true);
+            xhttpG.send();
+        }, 3000);
+
+        //get rain and if rain = Trời đang mưa change icon else change icon
+        setInterval(function () {
+            var xhttpR = new XMLHttpRequest();
+            xhttpR.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("weather-status").innerText = "Trạng thái thời tiết: " + this.responseText;
+                    if (this.responseText == "Trời đang mưa") {
+                        document.getElementById("weather-icon").src = "https://ssl.gstatic.com/onebox/weather/64/partly_cloudy.png";
+                    } else {
+                        document.getElementById("weather-icon").src = "https://ssl.gstatic.com/onebox/weather/64/sunny.png";
+                    }
+                }
+            };
+            xhttpR.open("GET", "/rain", true);
+            xhttpR.send();
+        }, 3000);
+        //get humidity from sensor
+        setInterval(function () {
+            var xhttpH = new XMLHttpRequest();
+            xhttpH.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("humidity").innerText = "Độ ẩm: " + this.responseText + "%";
+                }
+            };
+            xhttpH.open("GET", "/humidity", true);
+            xhttpH.send();
+        }, 3000);
+        //get location from sensor 
+
+        setInterval(function () {
+            var xhttpL = new XMLHttpRequest();
+            xhttpL.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("location").innerText = this.responseText;
+                }
+            };
+            xhttpL.open("GET", "/location", true);
+            xhttpL.send();
+        }, 3000);
+        
+        //get timeline from sensor
+        setInterval(function () {
+            var xhttpT = new XMLHttpRequest();
+            xhttpT.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("timeline").innerText = this.responseText;
+                }
+            };
+            xhttpT.open("GET", "/timeline", true);
+            xhttpT.send();
+        }, 3000);
+        </script>
+    <script>
+        var chartT = new Highcharts.Chart({
+            chart: {
+                renderTo: 'chart-temperature',
+            },
+            title: {
+                text: 'Temperature'
+            },
+            series: [{
+                name: 'Temperature',
+                data: []
+            }],
+            plotOptions: {
+                line: {
+                    animation: true,
+                    dateLabels: {
+                        enabled: true
+                    }
+                },
+                series: {
+                    color: '#059e8a'
+                }
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: {
+                    second: '%H:%M:%S'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Temperature (°C)'
+                }
+            },
+            credits: {
+                enabled: false
+            }
+        });
+
+        var chartH = new Highcharts.Chart({
+            chart: {
+                renderTo: 'chart-humidity',
+            },
+            title: {
+                text: 'Humidity'
+            },
+            series: [{
+                name: 'Humidity',
+                data: []
+            }],
+            plotOptions: {
+                line: {
+                    animation: true,
+                    dateLabels: {
+                        enabled: true
+                    }
+                },
+                series: {
+                    color: '#059e8a'
+                }
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: {
+                    second: '%H:%M:%S'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Humidity (%)'
+                }
+            },
+            credits: {
+                enabled: false
+            }
+        });
+
+        var chartP = new Highcharts.Chart({
+            chart: {
+                renderTo: 'chart-pressure',
+            },
+            title: {
+                text: 'Pressure'
+            },
+            series: [{
+                name: 'Pressure',
+                data: []
+            }],
+            plotOptions: {
+                line: {
+                    animation: true,
+                    dateLabels: {
+                        enabled: true
+                    }
+                },
+                series: {
+                    color: '#059e8a'
+                }
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: {
+                    second: '%H:%M:%S'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Pressure (hPa)'
+                }
+            },
+            credits: {
+                enabled: false
+            }
+        });
+        var chartL = new Highcharts.Chart({
+            chart: {
+                renderTo: 'chart-lux',
+            },
+            title: {
+                text: 'Lux'
+            },
+            series: [{
+                name: 'Lux',
+                data: []
+            }],
+            plotOptions: {
+                line: {
+                    animation: true,
+                    dateLabels: {
+                        enabled: true
+                    }
+                },
+                series: {
+                    color: '#059e8a'
+                }
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: {
+                    second: '%H:%M:%S'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Lux (lx)'
+                }
+            },
+            credits: {
+                enabled: false
+            }
+        });
+
+        var chartG = new Highcharts.Chart({
+            chart: {
+                renderTo: 'chart-gas',
+            },
+            title: {
+                text: 'Gas'
+            },
+            series: [{
+                name: 'Gas',
+                data: []
+            }],
+            plotOptions: {
+                line: {
+                    animation: true,
+                    dateLabels: {
+                        enabled: true
+                    }
+                },
+                series: {
+                    color: '#059e8a'
+                }
+            },
+            xAxis: {
+                type: 'datetime',
+                dateTimeLabelFormats: {
+                    second: '%H:%M:%S'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Gas (ppm)'
+                }
+            },
+            credits: {
+                enabled: false
+            }
+        });
+
+
+        setInterval(function () {
+            var xhttpT = new XMLHttpRequest();
+            xhttpT.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var data = JSON.parse(this.responseText);
+                    // document.getElementById("temperature").innerText = "Nhiệt độ: " + data.temperature + "°C";
+                    var x = (new Date()).getTime();
+                    var y = parseFloat(this.responseText);
+                    chartT.series[0].addPoint([x, y], true, true);
+                    if (chartT.series[0].data.length > 40) {
+                        chartT.series[0].addPoint([x, y], true, true, true);
+                    } else {
+                        chartT.series[0].addPoint([x, y], true, false, true);
+                    }
+                }
+            };
+            xhttpT.open("GET", "/temperature", true);
+            xhttpT.send();
+        }, 3000);
+        setInterval(function () {
+
+            var xhttpH = new XMLHttpRequest();
+            xhttpH.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var x = (new Date()).getTime();
+                    var y = parseFloat(this.responseText);
+                    chartH.series[0].addPoint([x, y], true, true);
+                    if (chartH.series[0].data.length > 40) {
+                        chartH.series[0].addPoint([x, y], true, true, true);
+                    } else {
+                        chartH.series[0].addPoint([x, y], true, false, true);
+                    }
+                }
+            };
+            xhttpH.open("GET", "/humidity", true);
+            xhttpH.send();
+        }, 3000);
+        setInterval(function () {
+
+            var xhttpP = new XMLHttpRequest();
+            xhttpP.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var x = (new Date()).getTime();
+                    var y = parseFloat(this.responseText);
+                    chartP.series[0].addPoint([x, y], true, true);
+                    if (chartP.series[0].data.length > 40) {
+                        chartP.series[0].addPoint([x, y], true, true, true);
+                    } else {
+                        chartP.series[0].addPoint([x, y], true, false, true);
+                    }
+                }
+            };
+            xhttpP.open("GET", "/pressure", true);
+            xhttpP.send();
+        }, 3000);
+        setInterval(function () {
+
+            var xhttpL = new XMLHttpRequest();
+            xhttpL.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var x = (new Date()).getTime();
+                    var y = parseFloat(this.responseText);
+                    chartL.series[0].addPoint([x, y], true, true);
+                    if (chartL.series[0].data.length > 40) {
+                        chartL.series[0].addPoint([x, y], true, true, true);
+                    } else {
+                        chartL.series[0].addPoint([x, y], true, false, true);
+                    }
+                }
+            };
+            xhttpL.open("GET", "/lux", true);
+            xhttpL.send();
+        }, 3000);
+        setInterval(function () {
+
+            var xhttpG = new XMLHttpRequest();
+            xhttpG.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var x = (new Date()).getTime();
+                    var y = parseFloat(this.responseText);
+                    chartG.series[0].addPoint([x, y], true, true);
+                    if (chartG.series[0].data.length > 40) {
+                        chartG.series[0].addPoint([x, y], true, true, true);
+                    } else {
+                        chartG.series[0].addPoint([x, y], true, false, true);
+                    }
+                }
+            };
+            xhttpG.open("GET", "/gas", true);
+            xhttpG.send();
+        }, 3000);
+
+
+    </script>
+
+
+</body>
+
+</html>
